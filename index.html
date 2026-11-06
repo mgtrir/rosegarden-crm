@@ -3,79 +3,763 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rose Garden CRM & Склад</title>
+    <title>Роуз Гарден — CRM и Склад</title>
+    
+    <!-- Мобильная консоль Eruda -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
+
+    <!-- Firebase SDK (v9 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- SheetJS для импорта и экспорта Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js для аналитики -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Подключение стилей -->
     <link rel="stylesheet" href="style.css">
-    <!-- Подключение Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
-    <div id="app" class="container">
-        <!-- Шапка приложения -->
-        <header class="header">
-            <h1>Rose Garden — CRM & Склад</h1>
-            <div id="user-status">
-                <span id="current-user-name">Не авторизован</span>
-                <button id="logout-btn" style="display:none;" onclick="logout()">Выйти</button>
+
+    <!-- ЭКРАН ВХОДА И РЕГИСТРАЦИИ -->
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-box">
+            <h2 style="color:var(--primary); margin-bottom:0.5rem;" id="authTitle">🌸 Роуз Гарден CRM</h2>
+            <p style="font-size:0.85rem; color:#666; margin-bottom:1.5rem;">Войдите в систему сотрудника</p>
+
+            <form onsubmit="handleAuthSubmit(event)">
+                <div class="form-group" style="text-align:left;">
+                    <label>Эл. почта (Email)</label>
+                    <input type="email" id="authEmail" class="form-control" required placeholder="mgtir11@gmail.com">
+                </div>
+                <div class="form-group" style="text-align:left;">
+                    <label>Пароль</label>
+                    <input type="password" id="authPassword" class="form-control" required placeholder="******">
+                </div>
+
+                <div class="form-group" id="authNameGroup" style="text-align:left; display:none;">
+                    <label>Ваше Имя / Фамилия</label>
+                    <input type="text" id="authName" class="form-control" placeholder="Матевос Хачатурян">
+                </div>
+
+                <button type="submit" class="btn btn-success" style="width:100%; margin-top:0.5rem;" id="authSubmitBtn">Войти в CRM</button>
+            </form>
+
+            <div style="margin-top:1.2rem; font-size:0.85rem;">
+                <span id="authToggleText">Нет аккаунта?</span> 
+                <a href="#" onclick="toggleAuthMode()" style="color:var(--primary); font-weight:bold;" id="authToggleBtn">Зарегистрироваться</a>
             </div>
-        </header>
-
-        <!-- Блок авторизации -->
-        <section id="auth-section" class="card">
-            <h2>Вход в систему</h2>
-            <input type="email" id="login-email" placeholder="Email">
-            <input type="password" id="login-password" placeholder="Пароль">
-            <button onclick="login()">Войти</button>
-        </section>
-
-        <!-- Основной интерфейс CRM (скрыт до входа) -->
-        <main id="main-content" style="display:none;">
-            <!-- Навигация по вкладкам -->
-            <nav class="tabs">
-                <button class="tab-btn active" onclick="switchTab('catalog')">Каталог и Склад</button>
-                <button class="tab-btn" onclick="switchTab('client-info')">Данные клиента</button>
-                <button class="tab-btn" onclick="switchTab('orders')">Заказы / Инвойсы</button>
-            </nav>
-
-            <!-- Вкладка 1: Каталог цветов -->
-            <section id="tab-catalog" class="tab-content">
-                <h2>Каталог продукции Rose Garden</h2>
-                <div id="flower-catalog" class="grid-container">
-                    <!-- Сюда динамически подгружаются карточки цветов с фото -->
-                </div>
-            </section>
-
-            <!-- Вкладка 2: Расширенная информация о клиенте -->
-            <section id="tab-client-info" class="tab-content" style="display:none;">
-                <h2>Информация о покупателе и поставке</h2>
-                <div class="client-details-box card">
-                    <h3>Покупатель</h3>
-                    <p><strong>Страна / Клиент:</strong> <span id="client-name">Молдова</span></p>
-                    <p><strong>Регистрационный номер:</strong> <span id="client-reg">2599653</span></p>
-                    <p><strong>Основная лицензия:</strong> <span id="client-license">1179218</span></p>
-                    <p><strong>Таможенный код (DCCI):</strong> <span id="client-dcci">457202</span></p>
-                    
-                    <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
-                    
-                    <h3>Поставщик (Rose Garden LLC)</h3>
-                    <p><strong>Адрес:</strong> Armenia, Yerevan, Koryun 19</p>
-                    <p><strong>Tax Code:</strong> 02927742</p>
-                    <p><strong>Телефон:</strong> +374 33 058 058</p>
-                    <p><strong>Email:</strong> info@rosegarden.am</p>
-                </div>
-            </section>
-
-            <!-- Вкладка 3: Заказы -->
-            <section id="tab-orders" class="tab-content" style="display:none;">
-                <h2>Активный инвойс: ORD-836553</h2>
-                <div id="orders-container">
-                    <p>Общая сумма: <strong>$2 052,20</strong> (2 555 шт. / 51 коробка)</p>
-                </div>
-            </section>
-        </main>
+        </div>
     </div>
 
+    <!-- ГЛАВНЫЙ ИНТЕРФЕЙС -->
+    <header>
+        <div class="header-container">
+            <a href="#" class="logo">🌸 Роуз Гарден <span style="font-size:0.75rem; color:#888; font-weight:normal;">CRM и Склад</span></a>
+            <div class="cloud-status">
+                <span style="font-size:0.8rem;" id="currentUserInfo">👤 Загрузка...</span>
+            </div>
+            <div class="nav-actions">
+                <button class="btn btn-outline btn-sm" onclick="openClientsModal()">👥 Клиенты</button>
+                <button class="btn btn-outline btn-sm" onclick="openOrdersModal()">📋 Заказы</button>
+                <button class="btn btn-outline btn-sm" onclick="openProcurementsModal()">📑 Закуп</button>
+                <button class="btn btn-outline btn-sm admin-only" onclick="openFinanceModal()">💰 Касса и P&L</button>
+                <button class="btn btn-outline btn-sm admin-only" onclick="openAnalyticsModal()">📊 Аналитика</button>
+                <button class="btn btn-outline btn-sm admin-only" onclick="openRolesModal()">👑 Доступы</button>
+                <button class="btn btn-sm" onclick="openAdminModal()">📦 Склад</button>
+                <button class="btn btn-dark btn-sm" onclick="handleLogout()">Выйти</button>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <h1>Склад и Витрина Цветов</h1>
+        <p>Настоящие остатки склада и CRM-система для работы с оптовыми покупателями и экспорта.</p>
+    </section>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Поиск по названию сорта..." oninput="renderCatalog()">
+        </div>
+
+        <div class="filter-row">
+            <span class="filter-label">🏷️ Вид розы:</span>
+            <div class="size-filter" id="typeFilters">
+                <span class="size-chip active" onclick="filterType('ALL', this)">Все виды</span>
+                <span class="size-chip" onclick="filterType('Одноголовая', this)">🌹 Одноголовые</span>
+                <span class="size-chip" onclick="filterType('Кустовая', this)">🌿 Кустовые</span>
+                <span class="size-chip" onclick="filterType('Эксклюзивная', this)">🌟 Эксклюзивные</span>
+            </div>
+        </div>
+
+        <div class="filter-row">
+            <span class="filter-label">🌸 Сорта роз:</span>
+            <div class="size-filter" id="nameFilterChips"></div>
+        </div>
+
+        <div class="filter-row">
+            <span class="filter-label">📏 Размер:</span>
+            <div class="size-filter" id="sizeFilters">
+                <span class="size-chip active" onclick="filterSize('ALL', this)">Все размеры</span>
+                <span class="size-chip" onclick="filterSize('30', this)">30 см</span>
+                <span class="size-chip" onclick="filterSize('40', this)">40 см</span>
+                <span class="size-chip" onclick="filterSize('50', this)">50 см</span>
+                <span class="size-chip" onclick="filterSize('60', this)">60 см</span>
+                <span class="size-chip" onclick="filterSize('70', this)">70 см</span>
+                <span class="size-chip" onclick="filterSize('80', this)">80 см</span>
+                <span class="size-chip" onclick="filterSize('90', this)">90 см</span>
+                <span class="size-chip" onclick="filterSize('100', this)">100 см</span>
+            </div>
+        </div>
+
+        <div class="filter-row">
+            <span class="filter-label">📐 Размер карточек:</span>
+            <div class="size-filter" id="cardSizeFilters">
+                <span class="size-chip" onclick="setCardSize('compact', this)">Компактные</span>
+                <span class="size-chip active" onclick="setCardSize('medium', this)">Средние</span>
+                <span class="size-chip" onclick="setCardSize('large', this)">Крупные</span>
+            </div>
+        </div>
+    </div>
+
+    <main class="catalog" id="catalogGrid"></main>
+
+    <!-- Корзина Продаж -->
+    <div class="cart-bar" id="cartBar" style="display: none;">
+        <div class="cart-info">
+            В заказе: <strong id="cartCount">0</strong> пачек
+        </div>
+        <div class="cart-actions" style="display:flex; gap:8px;">
+            <button class="btn btn-success btn-sm" onclick="openSaveOrderModal()">💾 Оформить Сделку</button>
+            <button class="btn btn-dark btn-sm" onclick="exportStockExcel()">📊 Excel (.xlsx)</button>
+            <button class="btn btn-outline btn-sm" onclick="clearCart()">Очистить</button>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ОФОРМЛЕНИЯ СДЕЛКИ -->
+    <div class="modal" id="saveOrderModal">
+        <div class="modal-content" style="max-width: 750px;">
+            <div class="modal-header">
+                <h2 id="orderModalTitle">💾 Оформление Продажи Клиенту</h2>
+                <button class="close-btn" onclick="closeSaveOrderModal()">&times;</button>
+            </div>
+            <form onsubmit="handleCheckoutSubmit(event)">
+                <input type="hidden" id="editingOrderId" value="">
+                <div class="form-row">
+                    <div class="form-group" style="flex:2;">
+                        <label>Выберите Клиента (Цены подставятся из персонального прайса)</label>
+                        <select id="orderClientSelect" class="form-control" required onchange="onClientSelectChanged()">
+                            <option value="">Загрузка клиентов...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Статус Заказа</label>
+                        <select id="orderStatusSelect" class="form-control">
+                            <option value="Новый">Новый</option>
+                            <option value="В работе">В работе</option>
+                            <option value="Выполнен">Выполнен (Оплачен)</option>
+                            <option value="Отменен">Отменен</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="background:#f8fafc; padding:1rem; border-radius:8px; margin-bottom:1rem; border:1px solid #cbd5e1;">
+                    <h3>Состав заказа:</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr><th>Сорт / Цветок</th><th>Валюта</th><th>Цена из прайса</th><th>Пачек</th><th>Сумма</th><th>Действия</th></tr>
+                            </thead>
+                            <tbody id="checkoutItemsTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <select id="editAddFlowerSelect" class="form-control" style="flex:2; min-width:180px;"></select>
+                        <input type="number" id="editAddPacksInput" class="form-control" value="10" style="width:90px;" placeholder="Пач">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="addFlowerToEditingOrder()">+ Добавить товар</button>
+                    </div>
+
+                    <hr style="margin:0.8rem 0; border:0; border-top:1px solid #ddd;">
+                    <div style="font-size:1.1rem; font-weight:bold; text-align:right;">Итого: <span id="checkoutTotalSum" style="color:var(--primary);">0</span></div>
+                </div>
+
+                <div style="display:flex; gap:8px;">
+                    <button type="submit" class="btn btn-success" style="flex:1;">Сохранить Сделку</button>
+                    <button type="button" class="btn btn-dark" onclick="closeSaveOrderModal()">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ПЕРСОНАЛЬНЫХ ЦЕН КЛИЕНТА -->
+    <div class="modal" id="clientPricesModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Персональные Цены Клиента: <span id="pricingClientName" style="color:var(--primary);"></span></h2>
+                <button class="close-btn" onclick="closeClientPricesModal()">&times;</button>
+            </div>
+            <input type="hidden" id="pricingClientId" value="">
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">
+                Укажите точную цену за единицу (штуку) для этого клиента. Все счета и инвойсы будут формироваться строго по этим ценам.
+            </p>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Вид и Длина (Категория / Размер)</th>
+                            <th>Цена в драмах (AMD)</th>
+                            <th>Цена в долларах (USD) и Валюта</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientPricesTableBody"></tbody>
+                </table>
+            </div>
+            <div style="margin-top: 1.5rem; display: flex; gap: 8px;">
+                <button type="button" class="btn btn-success" onclick="saveClientPrices()">💾 Сохранить цены клиента</button>
+                <button type="button" class="btn btn-dark" onclick="closeClientPricesModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- СТАНДАРТНЫЙ КОММЕРЧЕСКИЙ ИНВОЙС НА АНГЛИЙСКОМ -->
+    <div class="modal" id="printInvoiceModal">
+        <div class="modal-content" style="max-width: 780px; padding: 2rem; background: #fff;">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 5px;" class="no-print">
+                <button class="close-btn" onclick="closePrintModal()">&times;</button>
+            </div>
+            
+            <div id="invoiceContent" style="color:#000; font-size: 0.9rem;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
+                    <div></div>
+                    <div style="text-align:right; font-size: 0.9rem;">
+                        <p style="margin-bottom: 6px;"><strong>Invoice Number:</strong> <input type="text" id="customInvNumber" value="ORD-048945" style="width: 140px; padding: 2px; font-weight: bold; border: 1px solid #ccc; border-radius: 4px; text-align: right;"></p>
+                        <p><strong>Date:</strong> <input type="text" id="customInvDate" value="27/10/2026" style="width: 120px; padding: 2px; font-weight: bold; border: 1px solid #ccc; border-radius: 4px; text-align: right;"></p>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; font-size: 0.85rem; line-height: 1.5;">
+                    <div style="width: 48%;">
+                        <p style="font-weight: bold; font-size: 0.95rem; margin-bottom: 4px;">Rose Garden LLC</p>
+                        <p>Tax Code: 02927742</p>
+                        <p>Phone Number: +374 33 058 058</p>
+                        <p>e-mail: info@rosegarden.am</p>
+                        <p>Address: Armenia Yerevan Koryun 19</p>
+                    </div>
+                    <div style="width: 48%;">
+                        <p style="font-weight: bold; font-size: 0.85rem;">Bill to:</p>
+                        <p id="invClientName" style="font-weight: bold; font-size: 0.95rem;">Tulpar general trading llc</p>
+                        <p>Registr No. 2599653</p>
+                        <p>Main License No. 1179218</p>
+                        <p>DCCI No. 457202</p>
+                    </div>
+                </div>
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:1.5rem; border: 1px solid #333; font-size: 0.85rem;">
+                    <tr>
+                        <td style="border: 1px solid #333; padding: 6px 10px; width: 50%;"><strong>Amount Total</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; text-align: right; width: 25%; font-weight: bold;"><span id="invTopAmountUsd">$0,00</span></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; width: 25%;">Total Value of Flowers</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"><strong>Total Units</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; text-align: right; font-weight: bold;"><span id="invTopTotalUnits">0</span></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px;">Total Number of Flowers</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"><strong>Bruto kg</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; text-align: right;"><input type="text" id="inputBruto" value="174,8" style="width: 80px; text-align: right; border: 1px solid #ccc; padding: 2px;"></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"></td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"><strong>Neto kg</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; text-align: right;"><input type="text" id="inputNeto" value="143,45" style="width: 80px; text-align: right; border: 1px solid #ccc; padding: 2px;"></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"></td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"><strong>Total Boxes</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; text-align: right;"><input type="text" id="inputBoxes" value="11" style="width: 80px; text-align: right; border: 1px solid #ccc; padding: 2px; font-weight: bold;"></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px;">Total Number of Boxes</td>
+                    </tr>
+                </table>
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:1rem; border: 1px solid #333; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="background:#2b579a; color: white;">
+                            <th style="border:1px solid #333; padding:6px 8px; text-align:left;">Description</th>
+                            <th style="border:1px solid #333; padding:6px 8px; text-align:center; width: 60px;">SM</th>
+                            <th style="border:1px solid #333; padding:6px 8px; text-align:center; width: 80px;">Quantity</th>
+                            <th style="border:1px solid #333; padding:6px 8px; text-align:right; width: 90px;">Price</th>
+                            <th style="border:1px solid #333; padding:6px 8px; text-align:right; width: 100px;">Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invItemsTableBody"></tbody>
+                </table>
+
+                <div style="display:flex; justify-content:space-between; margin-top:3rem; font-size:0.9rem; page-break-inside: avoid;">
+                    <div><p>Director</p></div>
+                    <div style="text-align:right;"><p>Armen Aghababyan</p></div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:2rem;" class="no-print">
+                <button class="btn btn-success" style="flex:1;" onclick="window.print()">🖨️ Печать / Сохранить в PDF</button>
+                <button class="btn btn-dark" onclick="closePrintModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- РУССКИЙ ИНВОЙС ДЛЯ СТ-1 -->
+    <div class="modal" id="printSt1InvoiceModal">
+        <div class="modal-content" style="max-width: 780px; padding: 2rem; background: #fff;">
+            <div class="modal-header no-print">
+                <h2>📄 Коммерческий Инвойс на русском (Для СТ-1)</h2>
+                <button class="close-btn" onclick="closeSt1PrintModal()">&times;</button>
+            </div>
+            
+            <div id="st1InvoiceContent" style="color:#000; font-size: 0.9rem; margin-top: 6cm;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; border-bottom: 2px solid #333; padding-bottom: 10px;">
+                    <div>
+                        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 5px;">КОММЕРЧЕСКИЙ ИНВОЙС</h2>
+                        <p style="font-size: 0.85rem; color: #555;">Для таможенного оформления и сертификата СТ-1</p>
+                    </div>
+                    <div style="text-align:right; font-size: 0.9rem;">
+                        <p><strong>№ инвойса:</strong> <span id="st1InvOrderId">2710-1</span></p>
+                        <p><strong>Дата:</strong> <span id="st1InvOrderDate">02.11.2026</span></p>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; font-size: 0.85rem; line-height: 1.5;">
+                    <div style="width: 48%;">
+                        <p style="font-weight: bold; font-size: 0.95rem; margin-bottom: 4px;">ООО «Роуз Гарден» (Rose Garden LLC)</p>
+                        <p>Налоговый код (ИНН): 02927742</p>
+                        <p>Телефон: +374 33 058 058</p>
+                        <p>Email: info@rosegarden.am</p>
+                        <p>Адрес: Армения, г. Ереван, ул. Корюна 19</p>
+                    </div>
+                    <div style="width: 48%;">
+                        <p style="font-weight: bold; font-size: 0.85rem;">Покупатель (Получатель):</p>
+                        <p id="st1InvClientName" style="font-weight: bold; font-size: 0.95rem;">Tulpar General Trading LLC</p>
+                        <p>Регистрационный №: 2599653</p>
+                        <p>Лицензия №: 1179218</p>
+                    </div>
+                </div>
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:1.5rem; border: 1px solid #333; font-size: 0.85rem;">
+                    <tr>
+                        <td style="border: 1px solid #333; padding: 6px 10px; width: 50%;"><strong>Общая стоимость</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; text-align: right; width: 25%; font-weight: bold;"><span id="st1InvTopAmount">$0,00</span></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; width: 25%;">Сумма</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"><strong>Общее кол-во штук</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; text-align: right; font-weight: bold;"><span id="st1InvTopUnits">0</span></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px;">Штук</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"><strong>Брутто (кг)</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; text-align: right;"><input type="text" id="st1InputBruto" value="174,8" style="width: 80px; text-align: right; border: 1px solid #ccc; padding: 2px;"></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"></td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"><strong>Нетто (кг)</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; text-align: right;"><input type="text" id="st1InputNeto" value="143,45" style="width: 80px; text-align: right; border: 1px solid #ccc; padding: 2px;"></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"></td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #333; padding: 6px 10px;"><strong>Всего мест (коробок)</strong></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px; text-align: right;"><input type="text" id="st1InputBoxes" value="11" style="width: 80px; text-align: right; border: 1px solid #ccc; padding: 2px; font-weight: bold;"></td>
+                        <td style="border: 1px solid #333; padding: 6px 10px;">Коробок</td>
+                    </tr>
+                </table>
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:1rem; border: 1px solid #333; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="background:#2b579a; color: white;">
+                            <th style="border:1px solid #333; padding:6px 8px; text-align:left;">Наименование / Сорт</th>
+                            <th style="border:1px solid #333; padding:6px 8px; text-align:center; width: 60px;">Размер (см)</th>
+                            <th style="border:1px solid #333; padding:6px 8px; text-align:center; width: 80px;">Количество</th>
+                            <th style="border:1px solid #333; padding:6px 8px; text-align:right; width: 90px;">Цена</th>
+                            <th style="border:1px solid #333; padding:6px 8px; text-align:right; width: 100px;">Сумма</th>
+                        </tr>
+                    </thead>
+                    <tbody id="st1InvItemsTableBody"></tbody>
+                </table>
+
+                <div style="display:flex; justify-content:space-between; margin-top:3rem; font-size:0.9rem; page-break-inside: avoid;">
+                    <div><p>Директор: Армен Агабабян</p></div>
+                    <div style="text-align:right;"><p>М.П. (Печать)</p></div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:2rem;" class="no-print">
+                <button class="btn btn-success" style="flex:1;" onclick="window.print()">🖨️ Печать ST-1 Инвойса (с отступом 6 см)</button>
+                <button class="btn btn-dark" onclick="closeSt1PrintModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- СКЛАДСКОЙ ИНВОЙС НА АНГЛИЙСКОМ -->
+    <div class="modal" id="printWarehouseInvoiceModal">
+        <div class="modal-content" style="max-width: 750px; padding: 1.5rem;">
+            <div style="display:flex; justify-content:flex-end; margin-bottom:0.5rem;" class="no-print">
+                <button class="close-btn" onclick="closeWarehouseInvoiceModal()">&times;</button>
+            </div>
+            
+            <div id="warehouseInvoiceContent" style="color:#000;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem;">
+                    <div>
+                        <h2 style="color:var(--accent); font-size:1.4rem; margin-bottom:2px;">ROSE GARDEN GREENHOUSE</h2>
+                        <p style="font-size:0.8rem; color:#555;">Armenia, Kotayk Region, Hrazdan<br>Greenhouse Warehouse Assembly List</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <h3 style="font-size:1.2rem; color:#333; margin-bottom:2px;">WAREHOUSE ASSEMBLY LIST</h3>
+                        <p style="font-size:0.9rem;"><strong>Order №:</strong> <span id="whInvOrderId">---</span></p>
+                        <p style="font-size:0.9rem;"><strong>Date:</strong> <span id="whInvOrderDate">---</span></p>
+                    </div>
+                </div>
+
+                <div style="background:#f8fafc; padding:10px; border-radius:6px; margin-bottom:1.2rem; font-size:0.9rem;">
+                    <p><strong>Consignee (Client):</strong> <span id="whInvClientName" style="font-weight:bold;">---</span></p>
+                </div>
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:1rem;">
+                    <thead>
+                        <tr style="background:#f1f5f9;">
+                            <th style="border:1px solid #cbd5e1; padding:6px; text-align:center;">№</th>
+                            <th style="border:1px solid #cbd5e1; padding:6px;">Variety Description & Size</th>
+                            <th style="border:1px solid #cbd5e1; padding:6px; text-align:center;">Packs</th>
+                            <th style="border:1px solid #cbd5e1; padding:6px; text-align:center;">Pcs / Pack</th>
+                            <th style="border:1px solid #cbd5e1; padding:6px; text-align:right;">Total Pieces</th>
+                        </tr>
+                    </thead>
+                    <tbody id="whInvItemsTableBody"></tbody>
+                </table>
+
+                <div style="display:flex; justify-content:space-between; margin-bottom:1rem; font-weight:bold; font-size:0.95rem;">
+                    <div>Total Packs: <span id="whInvTotalPacks" style="color:var(--accent);">0</span> packs</div>
+                    <div>Total Pieces: <span id="whInvTotalPieces" style="color:var(--accent);">0</span> pcs.</div>
+                </div>
+
+                <div id="whInvCategorySummary" style="background:#f8fafc; padding:8px 10px; border-radius:6px; margin-bottom:1.5rem; font-size:0.8rem; border:1px solid #cbd5e1;"></div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:2rem; font-size:0.9rem; border-top:1px dashed #ccc; padding-top:1rem;">
+                    <div><p>Warehouse Packer: ___________________</p></div>
+                    <div><p>Manager / Supervisor: ___________________</p></div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:2rem;" class="no-print">
+                <button class="btn btn-success" style="flex:1;" onclick="window.print()">🖨️ Print Warehouse List</button>
+                <button class="btn btn-dark" onclick="closeWarehouseInvoiceModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PACKING LIST -->
+    <div class="modal" id="printPackingModal">
+        <div class="modal-content" style="max-width: 750px; padding: 1.5rem;">
+            <div class="modal-header no-print">
+                <h2>📦 Packing List</h2>
+                <button class="close-btn" onclick="closePackingModal()">&times;</button>
+            </div>
+            
+            <div id="packingContent" style="color:#000;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem;">
+                    <div>
+                        <h2 style="color:var(--accent); font-size:1.4rem;">ROSE GARDEN GREENHOUSE</h2>
+                        <p style="font-size:0.8rem; color:#555;">Armenia, Kotayk Region, Hrazdan<br>Export Logistics Department</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <h3 style="font-size:1.2rem; color:#333;">PACKING LIST</h3>
+                        <p style="font-size:0.9rem;"><strong>Order №:</strong> <span id="packOrderId">---</span></p>
+                        <p style="font-size:0.9rem;"><strong>Date:</strong> <span id="packOrderDate">---</span></p>
+                    </div>
+                </div>
+
+                <div style="background:#f8fafc; padding:10px; border-radius:6px; margin-bottom:1.2rem; font-size:0.9rem;">
+                    <p><strong>Consignee:</strong> <span id="packClientName" style="font-weight:bold;">---</span></p>
+                </div>
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:1.5rem;">
+                    <thead>
+                        <tr style="background:#f1f5f9;">
+                            <th style="border:1px solid #cbd5e1; padding:8px;">Box / Position</th>
+                            <th style="border:1px solid #cbd5e1; padding:8px;">Variety Description</th>
+                            <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Packs</th>
+                            <th style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="packItemsTableBody"></tbody>
+                </table>
+
+                <div style="display:flex; justify-content:space-between; margin-bottom:2rem; font-weight:bold; font-size:1rem;">
+                    <div>Total Packs: <span id="packTotalPacks" style="color:var(--accent);">0</span> packs</div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:3rem; font-size:0.9rem; border-top:1px dashed #ccc; padding-top:1rem;">
+                    <div><p>Packer: ___________________</p></div>
+                    <div><p>Controller: ___________________</p></div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:2rem;" class="no-print">
+                <button class="btn btn-success" style="flex:1;" onclick="window.print()">🖨️ Print Packing List</button>
+                <button class="btn btn-dark" onclick="closePackingModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО КЛИЕНТОВ -->
+    <div class="modal" id="clientsModal">
+        <div class="modal-content" style="max-width: 950px;">
+            <div class="modal-header">
+                <h2>👥 База Клиентов и Контрагентов</h2>
+                <button class="close-btn" onclick="closeClientsModal()">&times;</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:10px;">
+                <input type="text" id="clientSearchInput" class="form-control" style="max-width:300px;" placeholder="Поиск клиентов..." oninput="renderClientsTable()">
+                <button class="btn btn-sm btn-success" onclick="openAddClientForm()">+ Новый Клиент</button>
+            </div>
+
+            <div id="addClientSection" style="display:none; background:#f9f9f9; padding:1.2rem; border-radius:8px; margin-bottom:1.2rem; border:1px solid #ddd;">
+                <h3 style="margin-bottom:0.8rem; color:var(--primary);" id="clientFormTitle">Добавить Клиента</h3>
+                <form onsubmit="handleSaveClient(event)">
+                    <input type="hidden" id="clientId" value="">
+                    <div class="form-row">
+                        <div class="form-group"><label>Название / Имя</label><input type="text" id="clientName" class="form-control" required placeholder="ООО Цветочный Рай"></div>
+                        <div class="form-group"><label>Телефон</label><input type="text" id="clientPhone" class="form-control" required placeholder="+374 99 000000"></div>
+                        <div class="form-group"><label>Город / Страна</label><input type="text" id="clientCity" class="form-control" placeholder="Алматы, Казахстан"></div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button type="submit" class="btn btn-sm btn-success">Сохранить</button>
+                        <button type="button" class="btn btn-dark btn-sm" onclick="closeAddClientForm()">Отмена</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr><th>Клиент / Компания</th><th>Телефон</th><th>Город / Страна</th><th>Персональные Цены</th><th>Действия</th></tr>
+                    </thead>
+                    <tbody id="clientsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ЗАКАЗОВ -->
+    <div class="modal" id="ordersModal">
+        <div class="modal-content" style="max-width: 1100px;">
+            <div class="modal-header">
+                <h2>📋 История Заказов и Экспортных Сделок</h2>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-dark btn-sm" onclick="exportOrdersExcel()">📊 Выгрузить заказы в Excel</button>
+                    <button class="close-btn" onclick="closeOrdersModal()">&times;</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr><th>№ Заказа</th><th>Дата</th><th>Клиент</th><th>Сумма</th><th>Статус</th><th>Экспортные документы</th><th>Действия</th></tr>
+                    </thead>
+                    <tbody id="ordersTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ЗАКУПА -->
+    <div class="modal" id="procurementsModal">
+        <div class="modal-content" style="max-width: 950px;">
+            <div class="modal-header">
+                <h2>📑 Документы Закупа и Прихода на Склад</h2>
+                <button class="close-btn" onclick="closeProcurementsModal()">&times;</button>
+            </div>
+            <div style="margin-bottom:1rem;">
+                <button class="btn btn-sm btn-success" onclick="openNewProcurementForm()">+ Создать Акт Закупа</button>
+            </div>
+
+            <div id="newProcurementSection" style="display:none; background:#f8fafc; padding:1.2rem; border-radius:8px; margin-bottom:1.2rem; border:1px solid #cbd5e1;">
+                <h3 style="margin-bottom:0.8rem; color:var(--accent);" id="procFormTitle">Новый Документ Прихода</h3>
+                <form onsubmit="handleSaveProcurement(event)">
+                    <input type="hidden" id="editingProcId" value="">
+                    <div class="form-row">
+                        <div class="form-group"><label>Поставщик / Парник</label><input type="text" id="procSupplier" class="form-control" required placeholder="Парник №1 Раздан"></div>
+                        <div class="form-group"><label>№ Документа</label><input type="text" id="procDocNum" class="form-control" required placeholder="ЗКП-101"></div>
+                        <div class="form-group"><label>Дата прихода</label><input type="date" id="procDate" class="form-control" required></div>
+                    </div>
+
+                    <div style="margin: 1rem 0;">
+                        <label style="font-weight:bold; font-size:0.85rem;">Товары в акте закупа:</label>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr><th>Цветок / Сорт со склада</th><th>Закупочная цена (֏)</th><th>Количество (пачек)</th><th>Сумма (֏)</th><th>Удалить</th></tr>
+                                </thead>
+                                <tbody id="procurementItemsTable"></tbody>
+                            </table>
+                        </div>
+
+                        <div style="margin-top: 0.8rem; display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end;">
+                            <div style="flex:2; min-width:180px;"><select id="procSelectFlower" class="form-control"></select></div>
+                            <div style="width:110px;"><input type="number" id="procPriceInput" class="form-control" placeholder="Закуп ֏"></div>
+                            <div style="width:100px;"><input type="number" id="procQtyInput" class="form-control" value="10" placeholder="Пачек"></div>
+                            <button type="button" class="btn btn-sm btn-outline" onclick="addProcurementRow()">+ Добавить сорт</button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem;">
+                        <div style="font-size:1.1rem; font-weight:bold;">Итого закупка: <span id="procTotalDisplay" style="color:var(--accent);">0</span> ֏</div>
+                        <div style="display:flex; gap:8px;">
+                            <button type="submit" class="btn btn-success btn-sm">💾 Провести и сохранить</button>
+                            <button type="button" class="btn btn-dark btn-sm" onclick="closeNewProcurementForm()">Отмена</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr><th>№ Документа</th><th>Дата</th><th>Поставщик</th><th>Сумма (֏)</th><th>Действия</th></tr>
+                    </thead>
+                    <tbody id="procurementsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО КАССЫ -->
+    <div class="modal" id="financeModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>💰 Касса, Расходы и Прибыль (P&L)</h2>
+                <button class="close-btn" onclick="closeFinanceModal()">&times;</button>
+            </div>
+            <div class="fin-cards">
+                <div class="fin-card income"><h4>Выручка</h4><div class="num" id="finTotalIncome">0 ֏</div></div>
+                <div class="fin-card expense"><h4>Расходы</h4><div class="num" id="finTotalExpense">0 ֏</div></div>
+                <div class="fin-card profit"><h4>Чистая Прибыль</h4><div class="num" id="finNetProfit">0 ֏</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО АНАЛИТИКИ -->
+    <div class="modal" id="analyticsModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>📊 Аналитика Продаж и Графики</h2>
+                <button class="close-btn" onclick="closeAnalyticsModal()">&times;</button>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap:1.5rem; margin-top:1rem;">
+                <div style="background:#f8fafc; padding:1rem; border-radius:8px; border:1px solid #e2e8f0;">
+                    <h3 style="font-size:0.95rem; margin-bottom:0.8rem; text-align:center;">Продажи по категориям</h3>
+                    <canvas id="categoryChart"></canvas>
+                </div>
+                <div style="background:#f8fafc; padding:1rem; border-radius:8px; border:1px solid #e2e8f0;">
+                    <h3 style="font-size:0.95rem; margin-bottom:0.8rem; text-align:center;">Выручка по дням</h3>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ДОСТУПОВ -->
+    <div class="modal" id="rolesModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>👑 Управление Доступами и Ролями</h2>
+                <button class="close-btn" onclick="closeRolesModal()">&times;</button>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr><th>Имя</th><th>Email</th><th>Текущая Роль</th><th>Изменить Доступ</th></tr>
+                    </thead>
+                    <tbody id="rolesTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО СКЛАДА -->
+    <div class="modal" id="adminModal">
+        <div class="modal-content" style="max-width: 1150px;">
+            <div class="modal-header">
+                <h2>📦 Управление Складом и Цветами</h2>
+                <button class="close-btn" onclick="closeAdminModal()">&times;</button>
+            </div>
+
+            <div style="margin-bottom: 1rem; display:flex; gap:8px; flex-wrap:wrap; justify-content:space-between; align-items:center;">
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn btn-sm" onclick="showWarehouseSection('list')">Список Склада</button>
+                    <button class="btn btn-outline btn-sm" onclick="showWarehouseSection('add')">+ Добавить новый сорт</button>
+                    
+                    <label class="btn btn-success btn-sm" style="margin:0; cursor:pointer;">
+                        📥 Загрузить остатки из Excel (.xlsx)
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display:none;" onchange="importDailyStock(event)">
+                    </label>
+                </div>
+                <button class="btn btn-dark btn-sm" onclick="exportStockExcel()">📊 Выгрузить в Excel (.xlsx)</button>
+            </div>
+
+            <div id="warehouseListSection">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Фото</th><th>Вид</th><th>Название сорта</th><th>Размер</th>
+                                <th style="text-align:center;">Штук в пачке</th><th style="text-align:center;">Остаток (Пачки/Կապ)</th>
+                                <th style="text-align:center;">Остаток (Штук/Քանակ)</th><th>Быстрый Приход / Списание</th><th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="warehouseAddSection" style="display:none; background:#f9f9f9; padding:1.2rem; border-radius:8px; border:1px solid #ddd;">
+                <h3 style="margin-bottom:1rem; color:var(--primary);" id="flowerFormTitle">Добавить Новый Сорт Роз</h3>
+                <form id="addFlowerForm" onsubmit="handleFlowerFormSubmit(event)">
+                    <input type="hidden" id="editItemId" value="">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Вид розы</label>
+                            <select id="flowerCategory" class="form-control" required onchange="setDefaultPiecesForCategory()">
+                                <option value="Одноголовая">🌹 Одноголовая</option>
+                                <option value="Кустовая">🌿 Кустовая (Spray)</option>
+                                <option value="Эксклюзивная">🌟 Эксклюзивная</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex:2;">
+                            <label>Название сорта</label>
+                            <input type="text" id="flowerName" class="form-control" required placeholder="Роза Red Naomi">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Размер</label><input type="text" id="flowerSize" class="form-control" required placeholder="60 см"></div>
+                        <div class="form-group"><label>Штук в одной пачке</label><input type="number" id="flowerPcsPerPack" class="form-control" required value="15" placeholder="15"></div>
+                        <div class="form-group"><label>Остаток (пачек)</label><input type="number" id="flowerPacks" class="form-control" required placeholder="10"></div>
+                        <div class="form-group"><label>Остаток (шт)</label><input type="number" id="flowerStock" class="form-control" required placeholder="150"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Ссылка на картинку (URL)</label>
+                        <input type="url" id="flowerImage" class="form-control" required placeholder="https://...">
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button type="submit" class="btn btn-success">Сохранить на Склад</button>
+                        <button type="button" class="btn btn-dark" onclick="showWarehouseSection('list')">Отмена</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение логики -->
     <script src="app.js"></script>
 </body>
 </html>
