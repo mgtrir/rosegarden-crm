@@ -68,7 +68,7 @@ function switchTab(tabId) {
     event.currentTarget.classList.add('active');
 }
 
-// Загрузка и отображение каталога цветов (доступно для всех авторизованных ролей)
+// Загрузка и отображение каталога цветов
 function loadCatalog() {
     const catalogContainer = document.getElementById('flower-catalog');
     if (!catalogContainer) return;
